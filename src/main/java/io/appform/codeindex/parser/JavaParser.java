@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex.parser;
 
 import com.github.javaparser.ParserConfiguration;
@@ -71,57 +72,57 @@ public class JavaParser implements Parser {
         try {
             final var cu = StaticJavaParser.parse(path);
             final var packageName = cu.getPackageDeclaration()
-                .map(pd -> pd.getName().asString())
-                .orElse(null);
-            final var filePath = sourceRoot != null 
-                ? sourceRoot.relativize(path).toString() 
-                : path.toString();
+                    .map(pd -> pd.getName().asString())
+                    .orElse(null);
+            final var filePath = sourceRoot != null
+                    ? sourceRoot.relativize(path).toString()
+                    : path.toString();
 
             // Classes/Interfaces
             cu.findAll(ClassOrInterfaceDeclaration.class).forEach(cid -> {
                 final var className = cid.getNameAsString();
                 symbols.add(Symbol.builder()
-                    .name(className)
-                    .className(className)
-                    .packageName(packageName)
-                    .kind(SymbolKind.CLASS)
-                    .filePath(filePath)
-                    .line(cid.getBegin().map(p -> p.line).orElse(-1))
-                    .signature(cid.getNameAsString())
-                    .build());
+                        .name(className)
+                        .className(className)
+                        .packageName(packageName)
+                        .kind(SymbolKind.CLASS)
+                        .filePath(filePath)
+                        .line(cid.getBegin().map(p -> p.line).orElse(-1))
+                        .signature(cid.getNameAsString())
+                        .build());
             });
 
             // Methods
             cu.findAll(MethodDeclaration.class).forEach(md -> {
                 final var className = md.findAncestor(ClassOrInterfaceDeclaration.class)
-                    .map(ClassOrInterfaceDeclaration::getNameAsString)
-                    .orElse(null);
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 symbols.add(Symbol.builder()
-                    .name(md.getNameAsString())
-                    .className(className)
-                    .packageName(packageName)
-                    .kind(SymbolKind.METHOD)
-                    .filePath(filePath)
-                    .line(md.getBegin().map(p -> p.line).orElse(-1))
-                    .signature(md.getSignature().asString())
-                    .build());
+                        .name(md.getNameAsString())
+                        .className(className)
+                        .packageName(packageName)
+                        .kind(SymbolKind.METHOD)
+                        .filePath(filePath)
+                        .line(md.getBegin().map(p -> p.line).orElse(-1))
+                        .signature(md.getSignature().asString())
+                        .build());
             });
 
             // Fields
             cu.findAll(FieldDeclaration.class).forEach(fd -> {
                 final var className = fd.findAncestor(ClassOrInterfaceDeclaration.class)
-                    .map(ClassOrInterfaceDeclaration::getNameAsString)
-                    .orElse(null);
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 fd.getVariables().forEach(v -> {
                     symbols.add(Symbol.builder()
-                        .name(v.getNameAsString())
-                        .className(className)
-                        .packageName(packageName)
-                        .kind(SymbolKind.FIELD)
-                        .filePath(filePath)
-                        .line(v.getBegin().map(p -> p.line).orElse(-1))
-                        .signature(v.getTypeAsString() + " " + v.getNameAsString())
-                        .build());
+                            .name(v.getNameAsString())
+                            .className(className)
+                            .packageName(packageName)
+                            .kind(SymbolKind.FIELD)
+                            .filePath(filePath)
+                            .line(v.getBegin().map(p -> p.line).orElse(-1))
+                            .signature(v.getTypeAsString() + " " + v.getNameAsString())
+                            .build());
                 });
             });
 
@@ -132,36 +133,36 @@ public class JavaParser implements Parser {
                     return;
                 }
                 final var className = vd.findAncestor(ClassOrInterfaceDeclaration.class)
-                    .map(ClassOrInterfaceDeclaration::getNameAsString)
-                    .orElse(null);
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 symbols.add(Symbol.builder()
-                    .name(vd.getNameAsString())
-                    .className(className)
-                    .packageName(packageName)
-                    .kind(SymbolKind.VARIABLE)
-                    .filePath(filePath)
-                    .line(vd.getBegin().map(p -> p.line).orElse(-1))
-                    .signature(vd.getTypeAsString() + " " + vd.getNameAsString())
-                    .build());
+                        .name(vd.getNameAsString())
+                        .className(className)
+                        .packageName(packageName)
+                        .kind(SymbolKind.VARIABLE)
+                        .filePath(filePath)
+                        .line(vd.getBegin().map(p -> p.line).orElse(-1))
+                        .signature(vd.getTypeAsString() + " " + vd.getNameAsString())
+                        .build());
             });
 
             // Method Calls (References)
             cu.findAll(MethodCallExpr.class).forEach(mce -> {
                 final var className = mce.findAncestor(ClassOrInterfaceDeclaration.class)
-                    .map(ClassOrInterfaceDeclaration::getNameAsString)
-                    .orElse(null);
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 try {
                     final ResolvedMethodDeclaration resolved = mce.resolve();
                     symbols.add(Symbol.builder()
-                        .name(mce.getNameAsString())
-                        .className(className)
-                        .packageName(packageName)
-                        .kind(SymbolKind.REFERENCE)
-                        .filePath(filePath)
-                        .line(mce.getBegin().map(p -> p.line).orElse(-1))
-                        .signature(mce.toString())
-                        .referenceTo(resolved.getQualifiedName())
-                        .build());
+                            .name(mce.getNameAsString())
+                            .className(className)
+                            .packageName(packageName)
+                            .kind(SymbolKind.REFERENCE)
+                            .filePath(filePath)
+                            .line(mce.getBegin().map(p -> p.line).orElse(-1))
+                            .signature(mce.toString())
+                            .referenceTo(resolved.getQualifiedName())
+                            .build());
                 } catch (Exception e) {
                     log.debug("Could not resolve method call: {}", mce.getNameAsString());
                 }
@@ -170,21 +171,21 @@ public class JavaParser implements Parser {
             // Name Expressions (Variable References)
             cu.findAll(NameExpr.class).forEach(ne -> {
                 final var className = ne.findAncestor(ClassOrInterfaceDeclaration.class)
-                    .map(ClassOrInterfaceDeclaration::getNameAsString)
-                    .orElse(null);
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 try {
                     final ResolvedValueDeclaration resolved = ne.resolve();
                     if (resolved.isVariable() || resolved.isField() || resolved.isEnumConstant()) {
                         symbols.add(Symbol.builder()
-                            .name(ne.getNameAsString())
-                            .className(className)
-                            .packageName(packageName)
-                            .kind(SymbolKind.REFERENCE)
-                            .filePath(filePath)
-                            .line(ne.getBegin().map(p -> p.line).orElse(-1))
-                            .signature(ne.getNameAsString())
-                            .referenceTo(resolved.getName())
-                            .build());
+                                .name(ne.getNameAsString())
+                                .className(className)
+                                .packageName(packageName)
+                                .kind(SymbolKind.REFERENCE)
+                                .filePath(filePath)
+                                .line(ne.getBegin().map(p -> p.line).orElse(-1))
+                                .signature(ne.getNameAsString())
+                                .referenceTo(resolved.getName())
+                                .build());
                     }
                 } catch (Exception e) {
                     log.debug("Could not resolve name expression: {}", ne.getNameAsString());

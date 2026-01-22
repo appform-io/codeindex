@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex.service;
 
 import io.appform.codeindex.models.Symbol;
@@ -38,27 +39,27 @@ class CodeExporterTest {
         Path dbPath = tempDir.resolve("test.db");
         try (SQLiteStorage storage = new SQLiteStorage(dbPath.toString())) {
             storage.saveSymbols(List.of(
-                Symbol.builder()
-                        .name("TestClass")
-                        .className("TestClass")
-                        .kind(SymbolKind.CLASS)
-                        .filePath("TestClass.java")
-                        .line(1)
-                        .signature("public class TestClass")
-                        .build(),
-                Symbol.builder()
-                        .name("testMethod")
-                        .className("TestClass")
-                        .kind(SymbolKind.METHOD)
-                        .filePath("TestClass.java")
-                        .line(2)
-                        .signature("public void testMethod()")
-                        .build()
+                    Symbol.builder()
+                            .name("TestClass")
+                            .className("TestClass")
+                            .kind(SymbolKind.CLASS)
+                            .filePath("TestClass.java")
+                            .line(1)
+                            .signature("public class TestClass")
+                            .build(),
+                    Symbol.builder()
+                            .name("testMethod")
+                            .className("TestClass")
+                            .kind(SymbolKind.METHOD)
+                            .filePath("TestClass.java")
+                            .line(2)
+                            .signature("public void testMethod()")
+                            .build()
             ));
         }
 
         CodeExporter exporter = new CodeExporter(dbPath.toString());
-        
+
         // Test Markdown Export
         Path mdFile = tempDir.resolve("export.md");
         exporter.export(mdFile.toString(), "markdown", null);

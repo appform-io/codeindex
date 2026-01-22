@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex.storage;
 
 import io.appform.codeindex.models.Symbol;
@@ -48,19 +49,19 @@ public class SQLiteStorage implements AutoCloseable {
 
     private void initializeSchema() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-                stmt.execute("""
-                CREATE TABLE IF NOT EXISTS symbols (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    class_name TEXT,
-                    package_name TEXT,
-                    kind TEXT NOT NULL,
-                    file_path TEXT NOT NULL,
-                    line INTEGER NOT NULL,
-                    signature TEXT,
-                    reference_to TEXT
-                )
-            """);
+            stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS symbols (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        class_name TEXT,
+                        package_name TEXT,
+                        kind TEXT NOT NULL,
+                        file_path TEXT NOT NULL,
+                        line INTEGER NOT NULL,
+                        signature TEXT,
+                        reference_to TEXT
+                    )
+                    """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_reference_to ON symbols(reference_to)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_class_name ON symbols(class_name)");
@@ -155,7 +156,9 @@ public class SQLiteStorage implements AutoCloseable {
             sql.append(" WHERE kind IN (");
             for (int i = 0; i < kinds.size(); i++) {
                 sql.append("?");
-                if (i < kinds.size() - 1) sql.append(",");
+                if (i < kinds.size() - 1) {
+                    sql.append(",");
+                }
             }
             sql.append(")");
         }

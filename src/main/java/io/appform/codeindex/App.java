@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex;
 
 import io.appform.codeindex.models.Symbol;
@@ -77,11 +78,11 @@ public class App {
         final var results = indexer.search(query);
         System.out.println("Found " + results.size() + " matches:");
         for (Symbol symbol : results) {
-            final var displayName = symbol.getClassName() != null 
-                ? symbol.getClassName() + "::" + symbol.getName() 
-                : symbol.getName();
-            System.out.printf("[%s] %s -> %s:%d (%s)%n", 
-                symbol.getKind(), displayName, symbol.getFilePath(), symbol.getLine(), symbol.getSignature());
+            final var displayName = symbol.getClassName() != null
+                    ? symbol.getClassName() + "::" + symbol.getName()
+                    : symbol.getName();
+            System.out.printf("[%s] %s -> %s:%d (%s)%n",
+                    symbol.getKind(), displayName, symbol.getFilePath(), symbol.getLine(), symbol.getSignature());
         }
     }
 

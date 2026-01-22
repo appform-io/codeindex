@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex;
 
 import io.appform.codeindex.models.Symbol;
@@ -24,16 +25,14 @@ import io.appform.codeindex.storage.SQLiteStorage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SecurityAndResilienceTest {
 
@@ -43,7 +42,8 @@ class SecurityAndResilienceTest {
     @Test
     void testFileCrawlerInvalidPath() {
         io.appform.codeindex.crawler.FileCrawler crawler = new io.appform.codeindex.crawler.FileCrawler();
-        assertThrows(IllegalArgumentException.class, () -> crawler.crawl(tempDir.resolve("non_existent").toString(), Collections.emptySet()));
+        assertThrows(IllegalArgumentException.class,
+                () -> crawler.crawl(tempDir.resolve("non_existent").toString(), Collections.emptySet()));
     }
 
     @Test
@@ -57,7 +57,7 @@ class SecurityAndResilienceTest {
         Files.createDirectories(srcDir);
         Files.writeString(srcDir.resolve("A.java"), "public class A {}");
         Path dbPath = tempDir.resolve("app_search.db");
-        
+
         App.main(new String[]{"index", srcDir.toString(), dbPath.toString()});
         // Test search command
         assertDoesNotThrow(() -> App.main(new String[]{"search", "A", dbPath.toString()}));
@@ -90,21 +90,21 @@ class SecurityAndResilienceTest {
     void testIndexingContinuesOnParseError() throws Exception {
         Path srcDir = tempDir.resolve("src");
         Files.createDirectories(srcDir);
-        
+
         // 1. Valid file
         Files.writeString(srcDir.resolve("Valid.java"), "public class Valid {}");
-        
+
         // 2. Corrupt/Invalid Java file
         Files.writeString(srcDir.resolve("Corrupt.java"), "this is not java code {");
-        
+
         Path dbPath = tempDir.resolve("resilience.db");
         ParserRegistry registry = new ParserRegistry();
         registry.register(new JavaParser(srcDir));
         CodeIndexer indexer = new CodeIndexer(dbPath.toString(), registry);
-        
+
         // Should not throw exception
         assertDoesNotThrow(() -> indexer.index(srcDir.toString()));
-        
+
         // Should have indexed the valid one
         try (SQLiteStorage storage = new SQLiteStorage(dbPath.toString())) {
             List<Symbol> results = storage.search("Valid");
@@ -117,13 +117,13 @@ class SecurityAndResilienceTest {
         Path srcDir = tempDir.resolve("project_root");
         Files.createDirectories(srcDir);
         Files.writeString(srcDir.resolve("A.java"), "public class A {}");
-        
+
         Path dbPath = tempDir.resolve("portable.db");
         ParserRegistry registry = new ParserRegistry();
         registry.register(new JavaParser(srcDir));
         CodeIndexer indexer = new CodeIndexer(dbPath.toString(), registry);
         indexer.index(srcDir.toString());
-        
+
         try (SQLiteStorage storage = new SQLiteStorage(dbPath.toString())) {
             List<Symbol> results = storage.search("A");
             assertEquals(1, results.size());
@@ -139,20 +139,20 @@ class SecurityAndResilienceTest {
             // Insert 1100 symbols
             for (int i = 0; i < 1100; i++) {
                 storage.saveSymbols(List.of(
-                    Symbol.builder()
-                        .name("CommonName")
-                        .kind(SymbolKind.CLASS)
-                        .filePath("F" + i)
-                        .line(i)
-                        .signature("S" + i)
-                        .build()
+                        Symbol.builder()
+                                .name("CommonName")
+                                .kind(SymbolKind.CLASS)
+                                .filePath("F" + i)
+                                .line(i)
+                                .signature("S" + i)
+                                .build()
                 ));
             }
-            
+
             // Search should return exactly 1000 (the default limit)
             List<Symbol> results = storage.search("CommonName");
             assertEquals(1000, results.size());
-            
+
             // Explicit limit should work
             List<Symbol> resultsWithSmallLimit = storage.search("CommonName", 10);
             assertEquals(10, resultsWithSmallLimit.size());

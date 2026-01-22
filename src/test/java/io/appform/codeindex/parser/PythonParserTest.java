@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex.parser;
 
 import io.appform.codeindex.models.Symbol;
@@ -25,7 +26,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PythonParserTest {
 
@@ -35,15 +37,15 @@ class PythonParserTest {
     @Test
     void testPythonParsing() throws IOException {
         Path pyFile = tempDir.resolve("script.py");
-        Files.writeString(pyFile, 
-            "class MyClass:\n" +
-            "    def __init__(self):\n" +
-            "        pass\n" +
-            "    def my_method(self, x):\n" +
-            "        return x\n" +
-            "\n" +
-            "def top_level_func():\n" +
-            "    pass\n"
+        Files.writeString(pyFile,
+                "class MyClass:\n" +
+                        "    def __init__(self):\n" +
+                        "        pass\n" +
+                        "    def my_method(self, x):\n" +
+                        "        return x\n" +
+                        "\n" +
+                        "def top_level_func():\n" +
+                        "    pass\n"
         );
 
         PythonParser parser = new PythonParser();

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex.crawler;
 
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +43,9 @@ public class FileCrawler {
                     .filter(path -> {
                         final var fileName = path.getFileName().toString();
                         final var lastDotIndex = fileName.lastIndexOf('.');
-                        if (lastDotIndex == -1) return false;
+                        if (lastDotIndex == -1) {
+                            return false;
+                        }
                         return supportedExtensions.contains(fileName.substring(lastDotIndex + 1));
                     })
                     .collect(Collectors.toList());

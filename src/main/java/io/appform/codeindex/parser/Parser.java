@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex.parser;
 
 import io.appform.codeindex.models.Symbol;
@@ -22,5 +23,6 @@ import java.util.Set;
 
 public interface Parser {
     Set<String> supportedExtensions();
+
     List<Symbol> parse(Path path, Path sourceRoot);
 }

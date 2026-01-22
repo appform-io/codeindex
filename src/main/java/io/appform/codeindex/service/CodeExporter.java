@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex.service;
 
 import io.appform.codeindex.models.Symbol;
@@ -124,7 +125,9 @@ public class CodeExporter {
     }
 
     private String escapeXml(String input) {
-        if (input == null) return "";
+        if (input == null) {
+            return "";
+        }
         return input.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")

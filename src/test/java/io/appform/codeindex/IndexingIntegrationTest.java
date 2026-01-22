@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.appform.codeindex;
 
 import io.appform.codeindex.models.Symbol;
@@ -21,12 +22,14 @@ import io.appform.codeindex.storage.SQLiteStorage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IndexingIntegrationTest {
 
@@ -38,28 +41,28 @@ class IndexingIntegrationTest {
         // 1. Create dummy Java files
         Path srcDir = tempDir.resolve("src");
         Files.createDirectories(srcDir);
-        
+
         Path javaFile1 = srcDir.resolve("TestClass.java");
         Files.writeString(javaFile1, """
-            package com.test;
-            public class TestClass {
-                private String myField;
-                public void testMethod() {
-                    int myVar = 10;
-                    System.out.println(myVar);
-                    otherMethod();
+                package com.test;
+                public class TestClass {
+                    private String myField;
+                    public void testMethod() {
+                        int myVar = 10;
+                        System.out.println(myVar);
+                        otherMethod();
+                    }
+                    public void otherMethod() {}
                 }
-                public void otherMethod() {}
-            }
-        """);
+                """);
 
         Path javaFile2 = srcDir.resolve("OtherClass.java");
         Files.writeString(javaFile2, """
-            package com.test;
-            public class OtherClass {
-                public void testMethod() {}
-            }
-        """);
+                package com.test;
+                public class OtherClass {
+                    public void testMethod() {}
+                }
+                """);
 
         Path dbPath = tempDir.resolve("test.db");
 
@@ -107,10 +110,10 @@ class IndexingIntegrationTest {
             assertEquals(2, references.size());
             assertTrue(references.stream().anyMatch(s -> s.getKind() == SymbolKind.METHOD));
             assertTrue(references.stream().anyMatch(s -> s.getKind() == SymbolKind.REFERENCE));
-            
+
             Symbol ref = references.stream().filter(s -> s.getKind() == SymbolKind.REFERENCE).findFirst().orElseThrow();
             assertNotNull(ref.getReferenceTo());
-            
+
             // Coverage for Symbol methods (toString, equals, hashCode)
             assertNotNull(ref.toString());
             assertEquals(ref, ref);
@@ -126,8 +129,10 @@ class IndexingIntegrationTest {
         Path dbPath = tempDir.resolve("search_test.db");
         try (SQLiteStorage storage = new SQLiteStorage(dbPath.toString())) {
             storage.saveSymbols(List.of(
-                Symbol.builder().name("Alpha").kind(SymbolKind.CLASS).filePath("F1").line(1).signature("S1").referenceTo(null).build(),
-                Symbol.builder().name("Beta").kind(SymbolKind.METHOD).filePath("F2").line(2).signature("S2").referenceTo(null).build()
+                    Symbol.builder().name("Alpha").kind(SymbolKind.CLASS).filePath("F1").line(1).signature("S1")
+                            .referenceTo(null).build(),
+                    Symbol.builder().name("Beta").kind(SymbolKind.METHOD).filePath("F2").line(2).signature("S2")
+                            .referenceTo(null).build()
             ));
 
             List<Symbol> results = storage.search("lp"); // matches Alpha
