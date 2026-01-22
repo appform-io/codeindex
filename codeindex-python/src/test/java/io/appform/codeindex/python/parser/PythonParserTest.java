@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.appform.codeindex.parser;
+package io.appform.codeindex.python.parser;
 
 import io.appform.codeindex.models.Symbol;
 import io.appform.codeindex.models.SymbolKind;
