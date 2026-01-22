@@ -20,7 +20,7 @@ A lightweight Java tool to index codebases into a local SQLite database for fast
 ```bash
 git clone https://github.com/appform-io/codeindex.git
 cd codeindex
-mvn clean package
+mvn clean install
 ```
 
 ## CLI Usage
@@ -30,62 +30,79 @@ The CLI supports two main commands: `index` and `search`.
 ### Indexing a Project
 To index a project into a database file:
 ```bash
-java -jar target/codeindex-1.0-SNAPSHOT.jar index <project_root_path> <sqlite_db_path>
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar index <project_root_path> <sqlite_db_path>
 ```
 *Example:*
 ```bash
-java -jar target/codeindex-1.0-SNAPSHOT.jar index /home/user/my-project ./project.db
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar index /home/user/my-project ./project.db
 ```
 The tool will automatically detect and index supported files (`.java`, `.py`).
 
 ### Searching for Symbols
 To search for a symbol by name (partial match supported):
 ```bash
-java -jar target/codeindex-1.0-SNAPSHOT.jar search <query> <sqlite_db_path>
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar search <query> <sqlite_db_path>
 ```
 *Example:*
 ```bash
-java -jar target/codeindex-1.0-SNAPSHOT.jar search calculateTotal ./project.db
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar search calculateTotal ./project.db
 ```
 
 #### Class-Aware Search
 You can filter symbols by their containing class using the `ClassName::SymbolName` syntax. This is particularly useful when multiple classes have methods with the same name.
 *Example:*
 ```bash
-java -jar target/codeindex-1.0-SNAPSHOT.jar search OrderService::calculateTotal ./project.db
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar search OrderService::calculateTotal ./project.db
 ```
-
-The output will show the symbol kind (CLASS, METHOD, REFERENCE, etc.), the qualified name (`Class::Symbol`), the file path, line number, and signature.
 
 
 ### Exporting Symbol Index
 You can export the entire indexed symbol database to Markdown or XML formats for better readability or machine consumption (e.g., for LLMs).
 
 ```bash
-java -jar target/codeindex-1.0-SNAPSHOT.jar export <db_path> <output_file> [format] [kinds]
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar export <db_path> <output_file> [format] [kinds]
 ```
 - **format:** `markdown` (default) or `xml`.
 - **kinds:** (Optional) Comma-separated list of `SymbolKind` (e.g., `CLASS,METHOD`). Defaults to exporting all indexed symbols.
 
 *Example:*
 ```bash
-java -jar target/codeindex-1.0-SNAPSHOT.jar export ./project.db ./summary.md markdown CLASS,METHOD
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar export ./project.db ./summary.md markdown CLASS,METHOD
 ```
 
 The output will group symbols by file and class for better organization.
 
 ## Library Usage
 
-You can use `CodeIndexer` directly in your Java application. Note that with the new architecture, you need to provide a `ParserRegistry`.
+You can use `CodeIndexer` directly in your Java application. Note that with the new architecture, you should use the BOM for version management.
 
 ### Dependency
 Add the following to your `pom.xml`:
+
 ```xml
-<dependency>
-    <groupId>io.appform.codeindex</groupId>
-    <artifactId>codeindex</artifactId>
-    <version>1.0-SNAPSHOT</version>
-</dependency>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.appform.codeindex</groupId>
+            <artifactId>codeindex-bom</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>io.appform.codeindex</groupId>
+        <artifactId>codeindex-core</artifactId>
+    </dependency>
+    <!-- Add language parsers as needed -->
+    <dependency>
+        <groupId>io.appform.codeindex</groupId>
+        <artifactId>codeindex-java</artifactId>
+    </dependency>
+</dependencies>
 ```
 
 ### Java API Example
@@ -131,6 +148,7 @@ mvn test
 ```
 
 ### Code Coverage
-After running tests, coverage reports are generated at:
-`target/site/jacoco/index.html`
+After running `mvn install`, a consolidated coverage report is generated at:
+`codeindex-reports/target/site/jacoco-aggregate/index.html`
 Currently maintaining ~89% instruction coverage.
+
