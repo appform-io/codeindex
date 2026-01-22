@@ -1,11 +1,12 @@
 # CodeIndex
 
-A lightweight Java tool to index codebases into a local SQLite database for fast symbol lookups, definitions, and references. It can be used as a CLI tool or integrated as a library into other Java projects.
+A lightweight Java tool to index codebases into a local SQLite database for fast symbol lookups, definitions, and references. It features a pluggable architecture supporting multiple programming languages.
 
 ## Features
-- **Fast Indexing:** Recursively crawls directories and parses Java files using JavaParser.
+- **Multi-Language Support:** Pluggable architecture currently supporting **Java** (via JavaParser) and **Python** (via Regex).
+- **Fast Indexing:** Recursively crawls directories and indexes files based on registered language extensions.
 - **Symbol Support:** Indexes Classes, Interfaces, Methods, Fields, and Local Variables.
-- **Reference Tracking:** Uses symbol resolution to find and store where methods are called or variables are used.
+- **Reference Tracking:** Supported for Java, providing insights into where methods are called or variables are used.
 - **SQLite Backend:** Persistent storage with indexed searching.
 - **Java 17 Support:** Built for modern Java features.
 
@@ -27,7 +28,7 @@ mvn clean package
 The CLI supports two main commands: `index` and `search`.
 
 ### Indexing a Project
-To index a Java project into a database file:
+To index a project into a database file:
 ```bash
 java -jar target/codeindex-1.0-SNAPSHOT.jar index <project_root_path> <sqlite_db_path>
 ```
@@ -35,6 +36,7 @@ java -jar target/codeindex-1.0-SNAPSHOT.jar index <project_root_path> <sqlite_db
 ```bash
 java -jar target/codeindex-1.0-SNAPSHOT.jar index /home/user/my-project ./project.db
 ```
+The tool will automatically detect and index supported files (`.java`, `.py`).
 
 ### Searching for Symbols
 To search for a symbol by name (partial match supported):
@@ -50,10 +52,10 @@ The output will show the symbol kind (CLASS, METHOD, REFERENCE, etc.), the file 
 
 ## Library Usage
 
-You can also use `CodeIndexer` directly in your Java application.
+You can use `CodeIndexer` directly in your Java application. Note that with the new architecture, you need to provide a `ParserRegistry`.
 
 ### Dependency
-Add the following to your `pom.xml` (after installing to local repo or hosting):
+Add the following to your `pom.xml`:
 ```xml
 <dependency>
     <groupId>io.appform.codeindex</groupId>
@@ -65,14 +67,27 @@ Add the following to your `pom.xml` (after installing to local repo or hosting):
 ### Java API Example
 ```java
 import io.appform.codeindex.service.CodeIndexer;
+import io.appform.codeindex.parser.ParserRegistry;
+import io.appform.codeindex.parser.JavaParser;
+import io.appform.codeindex.parser.PythonParser;
 import io.appform.codeindex.models.Symbol;
+import java.nio.file.Paths;
+import java.util.List;
 
 public class MyIndexer {
     public static void main(String[] args) throws Exception {
-        CodeIndexer indexer = new CodeIndexer("./my_code.db");
+        String projectPath = "/path/to/source";
         
-        // Index a project
-        indexer.index("/path/to/java/source");
+        // Setup Registry
+        ParserRegistry registry = new ParserRegistry();
+        registry.register(new JavaParser(Paths.get(projectPath)));
+        registry.register(new PythonParser());
+
+        // Initialize Indexer
+        CodeIndexer indexer = new CodeIndexer("./my_code.db", registry);
+        
+        // Index the project
+        indexer.index(projectPath);
         
         // Search for symbols
         List<Symbol> results = indexer.search("myFunction");
@@ -80,6 +95,9 @@ public class MyIndexer {
     }
 }
 ```
+
+## License
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
 
 ## Development
 
@@ -91,3 +109,4 @@ mvn test
 ### Code Coverage
 After running tests, coverage reports are generated at:
 `target/site/jacoco/index.html`
+Currently maintaining ~89% instruction coverage.
