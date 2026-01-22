@@ -22,6 +22,7 @@
     <mockito.version>5.10.0</mockito.version>
     <sqlite.version>3.45.1.0</sqlite.version>
     <javaparser.version>3.25.10</javaparser.version>
+    <reflections.version>0.10.2</reflections.version>
   </properties>
 
   <dependencyManagement>
@@ -80,6 +81,11 @@
         <groupId>org.mockito</groupId>
         <artifactId>mockito-junit-jupiter</artifactId>
         <version>${mockito.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.reflections</groupId>
+        <artifactId>reflections</artifactId>
+        <version>${reflections.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

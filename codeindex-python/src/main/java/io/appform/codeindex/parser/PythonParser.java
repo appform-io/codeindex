@@ -18,6 +18,7 @@ package io.appform.codeindex.parser;
 
 import io.appform.codeindex.models.Symbol;
 import io.appform.codeindex.models.SymbolKind;
+import io.appform.codeindex.parser.annotation.DiscoverableParser;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -30,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
+@DiscoverableParser
 public class PythonParser implements Parser {
 
     private static final Pattern CLASS_PATTERN = Pattern.compile("^class\\s+([a-zA-Z_][a-zA-Z0-9_]*)");

@@ -42,9 +42,14 @@ import java.util.List;
 import java.util.Set;
 
 @Slf4j
+@io.appform.codeindex.parser.annotation.DiscoverableParser
 public class JavaParser implements Parser {
 
-    private final CombinedTypeSolver typeSolver;
+    private CombinedTypeSolver typeSolver;
+
+    public JavaParser() {
+        this(null);
+    }
 
     public JavaParser(Path sourceRoot) {
         this.typeSolver = new CombinedTypeSolver();

@@ -16,14 +16,42 @@
 
 package io.appform.codeindex.parser;
 
+import io.appform.codeindex.parser.annotation.DiscoverableParser;
+import lombok.extern.slf4j.Slf4j;
+import org.reflections.Reflections;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class ParserRegistry {
     private final List<Parser> parsers = new ArrayList<>();
+
+    public ParserRegistry() {
+        discoverParsers();
+    }
+
+    private void discoverParsers() {
+        final var reflections = new Reflections("io.appform.codeindex.parser");
+        final var parserClasses = reflections.getTypesAnnotatedWith(DiscoverableParser.class);
+        for (Class<?> clazz : parserClasses) {
+            if (Parser.class.isAssignableFrom(clazz)) {
+                try {
+                    // Try to instantiate using default constructor first
+                    final var parser = (Parser) clazz.getDeclaredConstructor().newInstance();
+                    register(parser);
+                    log.info("Discovered and registered parser: {}", clazz.getName());
+                } catch (NoSuchMethodException e) {
+                    log.debug("No default constructor for {}, skipping auto-registration. It must be registered manually.", clazz.getName());
+                } catch (Exception e) {
+                    log.error("Failed to instantiate parser: {}", clazz.getName(), e);
+                }
+            }
+        }
+    }
 
     public void register(Parser parser) {
         parsers.add(parser);

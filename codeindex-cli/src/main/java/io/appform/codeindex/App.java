@@ -18,8 +18,6 @@ package io.appform.codeindex;
 
 import io.appform.codeindex.models.Symbol;
 import io.appform.codeindex.models.SymbolKind;
-import io.appform.codeindex.parser.JavaParser;
-import io.appform.codeindex.parser.PythonParser;
 import io.appform.codeindex.parser.ParserRegistry;
 import io.appform.codeindex.service.CodeIndexer;
 import io.appform.codeindex.service.CodeExporter;
@@ -63,8 +61,6 @@ public class App {
 
     private static void indexProject(String projectPath, String dbPath) throws Exception {
         final var registry = new ParserRegistry();
-        registry.register(new JavaParser(Paths.get(projectPath)));
-        registry.register(new PythonParser());
         final var indexer = new CodeIndexer(dbPath, registry);
         indexer.index(projectPath);
         log.info("Indexing complete!");
