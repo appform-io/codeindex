@@ -53,6 +53,14 @@ class IndexingIntegrationTest {
             }
         """);
 
+        Path javaFile2 = srcDir.resolve("OtherClass.java");
+        Files.writeString(javaFile2, """
+            package com.test;
+            public class OtherClass {
+                public void testMethod() {}
+            }
+        """);
+
         Path dbPath = tempDir.resolve("test.db");
 
         // 2. Run Indexing
@@ -62,18 +70,28 @@ class IndexingIntegrationTest {
         try (SQLiteStorage storage = new SQLiteStorage(dbPath.toString())) {
             // Check Class
             List<Symbol> classes = storage.search("TestClass");
-            assertEquals(1, classes.size());
-            assertEquals(SymbolKind.CLASS, classes.get(0).getKind());
+            // 7 matches because 'TestClass' matches class name for: Class, Field, 2 Methods, Variable, 2 References
+            assertTrue(classes.size() >= 1);
+            assertTrue(classes.stream().anyMatch(s -> s.getKind() == SymbolKind.CLASS && "TestClass".equals(s.getName())));
 
             // Check Field
             List<Symbol> fields = storage.search("myField");
             assertEquals(1, fields.size());
             assertEquals(SymbolKind.FIELD, fields.get(0).getKind());
+            assertEquals("TestClass", fields.get(0).getClassName());
 
             // Check Method
             List<Symbol> methods = storage.search("testMethod");
-            assertEquals(1, methods.size());
-            assertEquals(SymbolKind.METHOD, methods.get(0).getKind());
+            assertEquals(2, methods.size());
+            assertTrue(methods.stream().allMatch(s -> s.getKind() == SymbolKind.METHOD));
+            assertTrue(methods.stream().anyMatch(s -> "TestClass".equals(s.getClassName())));
+            assertTrue(methods.stream().anyMatch(s -> "OtherClass".equals(s.getClassName())));
+
+            // Check Class-Aware Search
+            List<Symbol> specificMethods = storage.search("TestClass::testMethod");
+            assertEquals(1, specificMethods.size());
+            assertEquals(SymbolKind.METHOD, specificMethods.get(0).getKind());
+            assertEquals("TestClass", specificMethods.get(0).getClassName());
 
             // Check Variable
             List<Symbol> variables = storage.search("myVar");
@@ -81,6 +99,7 @@ class IndexingIntegrationTest {
             assertTrue(variables.size() >= 1);
             assertTrue(variables.stream().anyMatch(s -> s.getKind() == SymbolKind.VARIABLE));
             assertTrue(variables.stream().anyMatch(s -> s.getKind() == SymbolKind.REFERENCE));
+            assertTrue(variables.stream().allMatch(s -> "TestClass".equals(s.getClassName())));
 
             // Check Method Reference
             List<Symbol> references = storage.search("otherMethod");

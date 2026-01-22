@@ -22,6 +22,7 @@ import lombok.Value;
 @Builder
 public class Symbol {
     String name;
+    String className;
     SymbolKind kind;
     String filePath;
     int line;

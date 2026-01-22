@@ -75,8 +75,10 @@ public class JavaParser implements Parser {
 
             // Classes/Interfaces
             cu.findAll(ClassOrInterfaceDeclaration.class).forEach(cid -> {
+                String className = cid.getNameAsString();
                 symbols.add(Symbol.builder()
-                        .name(cid.getNameAsString())
+                        .name(className)
+                        .className(className)
                         .kind(cid.isInterface() ? SymbolKind.INTERFACE : SymbolKind.CLASS)
                         .filePath(filePath)
                         .line(cid.getBegin().map(p -> p.line).orElse(-1))
@@ -86,8 +88,12 @@ public class JavaParser implements Parser {
 
             // Methods
             cu.findAll(MethodDeclaration.class).forEach(md -> {
+                String className = md.findAncestor(ClassOrInterfaceDeclaration.class)
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 symbols.add(Symbol.builder()
                         .name(md.getNameAsString())
+                        .className(className)
                         .kind(SymbolKind.METHOD)
                         .filePath(filePath)
                         .line(md.getBegin().map(p -> p.line).orElse(-1))
@@ -97,9 +103,13 @@ public class JavaParser implements Parser {
 
             // Fields
             cu.findAll(FieldDeclaration.class).forEach(fd -> {
+                String className = fd.findAncestor(ClassOrInterfaceDeclaration.class)
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 fd.getVariables().forEach(v -> {
                     symbols.add(Symbol.builder()
                             .name(v.getNameAsString())
+                            .className(className)
                             .kind(SymbolKind.FIELD)
                             .filePath(filePath)
                             .line(v.getBegin().map(p -> p.line).orElse(-1))
@@ -114,8 +124,12 @@ public class JavaParser implements Parser {
                 if (vd.getParentNode().map(p -> p instanceof FieldDeclaration).orElse(false)) {
                     return;
                 }
+                String className = vd.findAncestor(ClassOrInterfaceDeclaration.class)
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 symbols.add(Symbol.builder()
                         .name(vd.getNameAsString())
+                        .className(className)
                         .kind(SymbolKind.VARIABLE)
                         .filePath(filePath)
                         .line(vd.getBegin().map(p -> p.line).orElse(-1))
@@ -125,10 +139,14 @@ public class JavaParser implements Parser {
 
             // Method Calls (References)
             cu.findAll(MethodCallExpr.class).forEach(mce -> {
+                String className = mce.findAncestor(ClassOrInterfaceDeclaration.class)
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 try {
                     mce.resolve().toAst().ifPresent(declaration -> {
                         symbols.add(Symbol.builder()
                                 .name(mce.getNameAsString())
+                                .className(className)
                                 .kind(SymbolKind.REFERENCE)
                                 .filePath(filePath)
                                 .line(mce.getBegin().map(p -> p.line).orElse(-1))
@@ -143,10 +161,14 @@ public class JavaParser implements Parser {
 
             // Name Expressions (Variable References)
             cu.findAll(NameExpr.class).forEach(ne -> {
+                String className = ne.findAncestor(ClassOrInterfaceDeclaration.class)
+                        .map(ClassOrInterfaceDeclaration::getNameAsString)
+                        .orElse(null);
                 try {
                     ne.resolve().toAst().ifPresent(declaration -> {
                         symbols.add(Symbol.builder()
                                 .name(ne.getNameAsString())
+                                .className(className)
                                 .kind(SymbolKind.REFERENCE)
                                 .filePath(filePath)
                                 .line(ne.getBegin().map(p -> p.line).orElse(-1))

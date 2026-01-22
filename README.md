@@ -48,7 +48,15 @@ java -jar target/codeindex-1.0-SNAPSHOT.jar search <query> <sqlite_db_path>
 java -jar target/codeindex-1.0-SNAPSHOT.jar search calculateTotal ./project.db
 ```
 
-The output will show the symbol kind (CLASS, METHOD, REFERENCE, etc.), the file path, line number, and signature.
+#### Class-Aware Search
+You can filter symbols by their containing class using the `ClassName::SymbolName` syntax. This is particularly useful when multiple classes have methods with the same name.
+*Example:*
+```bash
+java -jar target/codeindex-1.0-SNAPSHOT.jar search OrderService::calculateTotal ./project.db
+```
+
+The output will show the symbol kind (CLASS, METHOD, REFERENCE, etc.), the qualified name (`Class::Symbol`), the file path, line number, and signature.
+
 
 ## Library Usage
 

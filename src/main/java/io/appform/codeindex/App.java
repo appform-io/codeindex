@@ -67,8 +67,11 @@ public class App {
         List<Symbol> results = indexer.search(query);
         System.out.println("Found " + results.size() + " matches:");
         for (Symbol symbol : results) {
+            String displayName = symbol.getClassName() != null 
+                ? symbol.getClassName() + "::" + symbol.getName() 
+                : symbol.getName();
             System.out.printf("[%s] %s -> %s:%d (%s)%n", 
-                symbol.getKind(), symbol.getName(), symbol.getFilePath(), symbol.getLine(), symbol.getSignature());
+                symbol.getKind(), displayName, symbol.getFilePath(), symbol.getLine(), symbol.getSignature());
         }
     }
 }
