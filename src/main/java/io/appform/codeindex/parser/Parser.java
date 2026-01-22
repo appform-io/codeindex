@@ -13,18 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.appform.codeindex.models;
+package io.appform.codeindex.parser;
 
-import lombok.Builder;
-import lombok.Value;
+import io.appform.codeindex.models.Symbol;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
 
-@Value
-@Builder
-public class Symbol {
-    String name;
-    SymbolKind kind;
-    String filePath;
-    int line;
-    String signature;
-    String referenceTo;
+public interface Parser {
+    Set<String> supportedExtensions();
+    List<Symbol> parse(Path path, Path sourceRoot);
 }
