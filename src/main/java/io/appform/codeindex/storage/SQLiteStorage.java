@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 public class SQLiteStorage implements AutoCloseable {
@@ -143,6 +144,29 @@ public class SQLiteStorage implements AutoCloseable {
             }
         }
         return results;
+    }
+
+    public List<Symbol> getAllSymbols(Set<SymbolKind> kinds) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT name, class_name, kind, file_path, line, signature, reference_to FROM symbols");
+        if (kinds != null && !kinds.isEmpty()) {
+            sql.append(" WHERE kind IN (");
+            for (int i = 0; i < kinds.size(); i++) {
+                sql.append("?");
+                if (i < kinds.size() - 1) sql.append(",");
+            }
+            sql.append(")");
+        }
+        sql.append(" ORDER BY file_path, line");
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql.toString())) {
+            if (kinds != null && !kinds.isEmpty()) {
+                int i = 1;
+                for (SymbolKind kind : kinds) {
+                    pstmt.setString(i++, kind.name());
+                }
+            }
+            return executeSearch(pstmt);
+        }
     }
 
     @Override

@@ -58,6 +58,22 @@ java -jar target/codeindex-1.0-SNAPSHOT.jar search OrderService::calculateTotal 
 The output will show the symbol kind (CLASS, METHOD, REFERENCE, etc.), the qualified name (`Class::Symbol`), the file path, line number, and signature.
 
 
+### Exporting Symbol Index
+You can export the entire indexed symbol database to Markdown or XML formats for better readability or machine consumption (e.g., for LLMs).
+
+```bash
+java -jar target/codeindex-1.0-SNAPSHOT.jar export <db_path> <output_file> [format] [kinds]
+```
+- **format:** `markdown` (default) or `xml`.
+- **kinds:** (Optional) Comma-separated list of `SymbolKind` (e.g., `CLASS,METHOD`). Defaults to exporting all indexed symbols.
+
+*Example:*
+```bash
+java -jar target/codeindex-1.0-SNAPSHOT.jar export ./project.db ./summary.md markdown CLASS,METHOD
+```
+
+The output will group symbols by file and class for better organization.
+
 ## Library Usage
 
 You can use `CodeIndexer` directly in your Java application. Note that with the new architecture, you need to provide a `ParserRegistry`.

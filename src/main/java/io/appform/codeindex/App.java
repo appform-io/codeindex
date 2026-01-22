@@ -16,14 +16,19 @@
 package io.appform.codeindex;
 
 import io.appform.codeindex.models.Symbol;
+import io.appform.codeindex.models.SymbolKind;
 import io.appform.codeindex.parser.JavaParser;
 import io.appform.codeindex.parser.PythonParser;
 import io.appform.codeindex.parser.ParserRegistry;
 import io.appform.codeindex.service.CodeIndexer;
+import io.appform.codeindex.service.CodeExporter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class App {
@@ -33,6 +38,9 @@ public class App {
             System.out.println("Commands:");
             System.out.println("  index <project_path> <db_path>");
             System.out.println("  search <query> <db_path>");
+            System.out.println("  export <db_path> <output_file> [format] [kinds]");
+            System.out.println("    format: markdown (default) or xml");
+            System.out.println("    kinds: comma-separated list of types (e.g. CLASS,METHOD). Default is ALL.");
             return;
         }
 
@@ -42,6 +50,8 @@ public class App {
                 indexProject(args[1], args[2]);
             } else if ("search".equals(command)) {
                 searchIndex(args[1], args[2]);
+            } else if ("export".equals(command)) {
+                exportIndex(args);
             } else {
                 System.out.println("Unknown command: " + command);
             }
@@ -73,5 +83,25 @@ public class App {
             System.out.printf("[%s] %s -> %s:%d (%s)%n", 
                 symbol.getKind(), displayName, symbol.getFilePath(), symbol.getLine(), symbol.getSignature());
         }
+    }
+
+    private static void exportIndex(String[] args) throws Exception {
+        if (args.length < 3) {
+            System.out.println("Usage: export <db_path> <output_file> [format] [kinds]");
+            return;
+        }
+        String dbPath = args[1];
+        String outputFile = args[2];
+        String format = args.length > 3 ? args[3] : "markdown";
+        Set<SymbolKind> kinds = null;
+        if (args.length > 4) {
+            kinds = Arrays.stream(args[4].split(","))
+                    .map(String::trim)
+                    .map(SymbolKind::valueOf)
+                    .collect(Collectors.toSet());
+        }
+        CodeExporter exporter = new CodeExporter(dbPath);
+        exporter.export(outputFile, format, kinds);
+        log.info("Export complete: {}", outputFile);
     }
 }
