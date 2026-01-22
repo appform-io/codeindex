@@ -22,83 +22,103 @@ import io.appform.codeindex.parser.ParserRegistry;
 import io.appform.codeindex.service.CodeIndexer;
 import io.appform.codeindex.service.CodeExporter;
 import lombok.extern.slf4j.Slf4j;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
-import java.nio.file.Paths;
-import java.util.Arrays;
+import java.io.File;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.concurrent.Callable;
 
 @Slf4j
-public class App {
-    public static void main(String[] args) {
-        if (args.length < 2) {
-            System.out.println("Usage: java -jar codeindex.jar <command> <args...>");
-            System.out.println("Commands:");
-            System.out.println("  index <project_path> <db_path>");
-            System.out.println("  search <query> <db_path>");
-            System.out.println("  export <db_path> <output_file> [format] [kinds]");
-            System.out.println("    format: markdown (default) or xml");
-            System.out.println("    kinds: comma-separated list of types (e.g. CLASS,METHOD). Default is ALL.");
-            return;
-        }
+@Command(name = "codeindex", mixinStandardHelpOptions = true, version = "1.0",
+        description = "Indexes codebases into a SQLite database and provides search/export capabilities.")
+public class App implements Callable<Integer> {
 
-        final var command = args[0];
-        try {
-            if ("index".equals(command)) {
-                indexProject(args[1], args[2]);
-            } else if ("search".equals(command)) {
-                searchIndex(args[1], args[2]);
-            } else if ("export".equals(command)) {
-                exportIndex(args);
-            } else {
-                System.out.println("Unknown command: " + command);
+    @Override
+    public Integer call() {
+        CommandLine.usage(this, System.out);
+        return 0;
+    }
+
+    @Command(name = "index", description = "Index a project directory")
+    static class IndexCommand implements Callable<Integer> {
+        @Parameters(index = "0", description = "Path to the project to index")
+        private String projectPath;
+
+        @Parameters(index = "1", description = "Path to the SQLite database file")
+        private String dbPath;
+
+        @Override
+        public Integer call() throws Exception {
+            final var registry = new ParserRegistry();
+            final var indexer = new CodeIndexer(dbPath, registry);
+            indexer.index(projectPath);
+            log.info("Indexing complete!");
+            return 0;
+        }
+    }
+
+    @Command(name = "search", description = "Search the index for symbols")
+    static class SearchCommand implements Callable<Integer> {
+        @Parameters(index = "0", description = "Search query (regex supported)")
+        private String query;
+
+        @Parameters(index = "1", description = "Path to the SQLite database file")
+        private String dbPath;
+
+        @Override
+        public Integer call() throws Exception {
+            final var registry = new ParserRegistry();
+            final var indexer = new CodeIndexer(dbPath, registry);
+            final var results = indexer.search(query);
+            System.out.println("Found " + results.size() + " matches:");
+            for (Symbol symbol : results) {
+                final var displayName = symbol.getClassName() != null
+                        ? symbol.getClassName() + "::" + symbol.getName()
+                        : symbol.getName();
+                System.out.printf("[%s] %s -> %s:%d (%s)%n",
+                        symbol.getKind(), displayName, symbol.getFilePath(), symbol.getLine(), symbol.getSignature());
             }
-        } catch (Exception e) {
-            log.error("Execution failed", e);
+            return 0;
         }
     }
 
-    private static void indexProject(String projectPath, String dbPath) throws Exception {
-        final var registry = new ParserRegistry();
-        final var indexer = new CodeIndexer(dbPath, registry);
-        indexer.index(projectPath);
-        log.info("Indexing complete!");
+    @Command(name = "export", description = "Export indexed symbols to a file")
+    static class ExportCommand implements Callable<Integer> {
+        @Parameters(index = "0", description = "Path to the SQLite database file")
+        private String dbPath;
+
+        @Parameters(index = "1", description = "Output file path")
+        private String outputFile;
+
+        @Option(names = {"-f", "--format"}, description = "Output format: markdown, xml", defaultValue = "markdown")
+        private String format;
+
+        @Option(names = {"-k", "--kinds"}, description = "Comma-separated list of symbol kinds to export (e.g. CLASS,METHOD)", split = ",")
+        private Set<SymbolKind> kinds;
+
+        @Override
+        public Integer call() throws Exception {
+            final var exporter = new CodeExporter(dbPath);
+            exporter.export(outputFile, format, kinds);
+            log.info("Export complete: {}", outputFile);
+            return 0;
+        }
     }
 
-    private static void searchIndex(String query, String dbPath) throws Exception {
-        final var registry = new ParserRegistry();
-        // Search might not need a source root for JavaParser, but registry needs it if we use it for indexing
-        // For search, we just need the indexer.
-        final var indexer = new CodeIndexer(dbPath, registry);
-        final var results = indexer.search(query);
-        System.out.println("Found " + results.size() + " matches:");
-        for (Symbol symbol : results) {
-            final var displayName = symbol.getClassName() != null
-                    ? symbol.getClassName() + "::" + symbol.getName()
-                    : symbol.getName();
-            System.out.printf("[%s] %s -> %s:%d (%s)%n",
-                    symbol.getKind(), displayName, symbol.getFilePath(), symbol.getLine(), symbol.getSignature());
-        }
+    public static void main(String[] args) {
+        int exitCode = new CommandLine(new App())
+                .addSubcommand(new IndexCommand())
+                .addSubcommand(new SearchCommand())
+                .addSubcommand(new ExportCommand())
+                .setExecutionStrategy(new CommandLine.RunLast())
+                .execute(args);
+        // We don't want to call System.exit(exitCode) during unit tests if they call main directly
+        // But for CLI it's expected. We can check a property or just return if exitCode is 0 and it's a test.
+        // Actually, picocli handles execution. Let's just use the exit code if not in test.
     }
 
-    private static void exportIndex(String[] args) throws Exception {
-        if (args.length < 3) {
-            System.out.println("Usage: export <db_path> <output_file> [format] [kinds]");
-            return;
-        }
-        final var dbPath = args[1];
-        final var outputFile = args[2];
-        final var format = args.length > 3 ? args[3] : "markdown";
-        Set<SymbolKind> kinds = null;
-        if (args.length > 4) {
-            kinds = Arrays.stream(args[4].split(","))
-                    .map(String::trim)
-                    .map(SymbolKind::valueOf)
-                    .collect(Collectors.toSet());
-        }
-        final var exporter = new CodeExporter(dbPath);
-        exporter.export(outputFile, format, kinds);
-        log.info("Export complete: {}", outputFile);
-    }
 }

@@ -3,29 +3,31 @@
 A lightweight Java tool to index codebases into a local SQLite database for fast symbol lookups, definitions, and references. It features a pluggable architecture supporting multiple programming languages.
 
 ## Features
-- **Multi-Language Support:** Pluggable architecture currently supporting **Java** (via JavaParser) and **Python** (via Regex).
+- **Multi-Language Support:** Pluggable architecture supporting **Java** (via JavaParser) and **Python** (via ANTLR4).
+- **Discovery System:** Automatically finds and registers language parsers using the Reflections API.
 - **Fast Indexing:** Recursively crawls directories and indexes files based on registered language extensions.
 - **Symbol Support:** Indexes Classes, Interfaces, Methods, Fields, and Local Variables.
 - **Reference Tracking:** Supported for Java, providing insights into where methods are called or variables are used.
+- **Polished CLI:** GNU-style command line interface using `picocli`.
 - **SQLite Backend:** Persistent storage with indexed searching.
-- **Java 17 Support:** Built for modern Java features.
+- **CI/CD Integrated:** Automated builds and aggregate coverage reporting via GitHub Actions.
 
 ## Installation
 
 ### Prerequisites
 - Java 17 or higher
-- Maven 3.6+
+- Maven 3.8+
 
 ### Build from source
 ```bash
 git clone https://github.com/appform-io/codeindex.git
 cd codeindex
-mvn clean install
+mvn clean install -PskipCheckstyle
 ```
 
 ## CLI Usage
 
-The CLI supports two main commands: `index` and `search`.
+The CLI supports three main subcommands: `index`, `search`, and `export`.
 
 ### Indexing a Project
 To index a project into a database file:
@@ -39,42 +41,41 @@ java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar index /home/user/m
 The tool will automatically detect and index supported files (`.java`, `.py`).
 
 ### Searching for Symbols
-To search for a symbol by name (partial match supported):
+To search for a symbol by name (regex supported):
 ```bash
 java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar search <query> <sqlite_db_path>
 ```
 *Example:*
 ```bash
-java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar search calculateTotal ./project.db
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar search ".*Service" ./project.db
 ```
 
 #### Class-Aware Search
-You can filter symbols by their containing class using the `ClassName::SymbolName` syntax. This is particularly useful when multiple classes have methods with the same name.
+You can filter symbols by their containing class using the `ClassName::SymbolName` syntax.
 *Example:*
 ```bash
 java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar search OrderService::calculateTotal ./project.db
 ```
 
-
 ### Exporting Symbol Index
-You can export the entire indexed symbol database to Markdown or XML formats for better readability or machine consumption (e.g., for LLMs).
+Export indexed symbols to Markdown or XML formats.
 
 ```bash
-java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar export <db_path> <output_file> [format] [kinds]
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar export <db_path> <output_file> [OPTIONS]
 ```
-- **format:** `markdown` (default) or `xml`.
-- **kinds:** (Optional) Comma-separated list of `SymbolKind` (e.g., `CLASS,METHOD`). Defaults to exporting all indexed symbols.
+
+**Options:**
+- `-f`, `--format`: `markdown` (default) or `xml`.
+- `-k`, `--kinds`: Comma-separated list of `SymbolKind` (e.g., `CLASS,METHOD`). Defaults to all.
 
 *Example:*
 ```bash
-java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar export ./project.db ./summary.md markdown CLASS,METHOD
+java -jar codeindex-cli/target/codeindex-cli-1.0-SNAPSHOT.jar export ./project.db ./summary.md --format markdown --kinds CLASS,METHOD
 ```
 
 The output will group symbols by file and class for better organization.
 
 ## Library Usage
-
-You can use `CodeIndexer` directly in your Java application. Note that with the new architecture, you should use the BOM for version management.
 
 ### Dependency
 Add the following to your `pom.xml`:
@@ -97,10 +98,13 @@ Add the following to your `pom.xml`:
         <groupId>io.appform.codeindex</groupId>
         <artifactId>codeindex-core</artifactId>
     </dependency>
-    <!-- Add language parsers as needed -->
     <dependency>
         <groupId>io.appform.codeindex</groupId>
         <artifactId>codeindex-java</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.appform.codeindex</groupId>
+        <artifactId>codeindex-python</artifactId>
     </dependency>
 </dependencies>
 ```
@@ -109,28 +113,17 @@ Add the following to your `pom.xml`:
 ```java
 import io.appform.codeindex.service.CodeIndexer;
 import io.appform.codeindex.parser.ParserRegistry;
-import io.appform.codeindex.parser.JavaParser;
-import io.appform.codeindex.parser.PythonParser;
 import io.appform.codeindex.models.Symbol;
-import java.nio.file.Paths;
 import java.util.List;
 
 public class MyIndexer {
     public static void main(String[] args) throws Exception {
-        String projectPath = "/path/to/source";
-        
-        // Setup Registry
+        // Registry automatically discovers @DiscoverableParser implementations
         ParserRegistry registry = new ParserRegistry();
-        registry.register(new JavaParser(Paths.get(projectPath)));
-        registry.register(new PythonParser());
-
-        // Initialize Indexer
         CodeIndexer indexer = new CodeIndexer("./my_code.db", registry);
         
-        // Index the project
-        indexer.index(projectPath);
+        indexer.index("/path/to/source");
         
-        // Search for symbols
         List<Symbol> results = indexer.search("myFunction");
         results.forEach(s -> System.out.println(s.getName() + " found at " + s.getLine()));
     }
@@ -144,11 +137,10 @@ Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for detai
 
 ### Running Tests
 ```bash
-mvn test
+mvn test -PskipCheckstyle
 ```
 
 ### Code Coverage
 After running `mvn install`, a consolidated coverage report is generated at:
 `codeindex-reports/target/site/jacoco-aggregate/index.html`
-Currently maintaining ~89% instruction coverage.
-
+Currently maintaining high instruction coverage across core logic and parsers.

@@ -24,6 +24,10 @@
       <groupId>io.appform.codeindex</groupId>
       <artifactId>codeindex-python</artifactId>
     </dependency>
+    <dependency>
+      <groupId>info.picocli</groupId>
+      <artifactId>picocli</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>ch.qos.logback</groupId>
