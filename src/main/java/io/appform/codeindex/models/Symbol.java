@@ -16,13 +16,18 @@
 package io.appform.codeindex.models;
 
 import lombok.Builder;
-import lombok.Value;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
-@Value
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Symbol {
     String name;
     String className;
+    String packageName;
     SymbolKind kind;
     String filePath;
     int line;

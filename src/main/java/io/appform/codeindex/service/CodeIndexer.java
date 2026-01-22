@@ -41,14 +41,14 @@ public class CodeIndexer {
 
     public void index(String projectPath) throws Exception {
         log.info("Starting indexing for project: {}", projectPath);
-        List<Path> files = crawler.crawl(projectPath, parserRegistry.getSupportedExtensions());
+        final var files = crawler.crawl(projectPath, parserRegistry.getSupportedExtensions());
         
         try (SQLiteStorage storage = new SQLiteStorage(dbPath)) {
             for (Path file : files) {
                 try {
-                    Parser parser = parserRegistry.getParserForFile(file);
+                    final var parser = parserRegistry.getParserForFile(file);
                     if (parser != null) {
-                        List<Symbol> symbols = parser.parse(file, Paths.get(projectPath));
+                        final var symbols = parser.parse(file, Paths.get(projectPath));
                         storage.saveSymbols(symbols);
                     }
                 } catch (Exception e) {

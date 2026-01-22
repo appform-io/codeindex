@@ -29,12 +29,12 @@ public class ParserRegistry {
     }
 
     public Parser getParserForFile(Path path) {
-        String fileName = path.getFileName().toString();
-        int lastDotIndex = fileName.lastIndexOf('.');
+        final var fileName = path.getFileName().toString();
+        final var lastDotIndex = fileName.lastIndexOf('.');
         if (lastDotIndex == -1) {
             return null;
         }
-        String extension = fileName.substring(lastDotIndex + 1);
+        final var extension = fileName.substring(lastDotIndex + 1);
         return parsers.stream()
                 .filter(p -> p.supportedExtensions().contains(extension))
                 .findFirst()

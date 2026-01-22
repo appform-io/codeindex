@@ -37,7 +37,7 @@ public class CodeExporter {
 
     public void export(String outputFile, String format, Set<SymbolKind> kinds) throws SQLException, IOException {
         try (SQLiteStorage storage = new SQLiteStorage(dbPath)) {
-            List<Symbol> symbols = storage.getAllSymbols(kinds);
+            final var symbols = storage.getAllSymbols(kinds);
             if ("xml".equalsIgnoreCase(format)) {
                 exportToXml(symbols, outputFile);
             } else {
@@ -51,7 +51,7 @@ public class CodeExporter {
             writer.println("# Project Symbol Index");
             writer.println();
 
-            Map<String, List<Symbol>> groupedByFile = symbols.stream()
+            final var groupedByFile = symbols.stream()
                     .collect(Collectors.groupingBy(Symbol::getFilePath));
 
             for (Map.Entry<String, List<Symbol>> fileEntry : groupedByFile.entrySet()) {
@@ -59,7 +59,7 @@ public class CodeExporter {
                 writer.println();
                 
                 // Group by Class within File
-                Map<String, List<Symbol>> groupedByClass = fileEntry.getValue().stream()
+                final var groupedByClass = fileEntry.getValue().stream()
                         .collect(Collectors.groupingBy(s -> s.getClassName() != null ? s.getClassName() : "Top-level"));
 
                 for (Map.Entry<String, List<Symbol>> classEntry : groupedByClass.entrySet()) {
@@ -86,13 +86,13 @@ public class CodeExporter {
             writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
             writer.println("<project>");
 
-            Map<String, List<Symbol>> groupedByFile = symbols.stream()
+            final var groupedByFile = symbols.stream()
                     .collect(Collectors.groupingBy(Symbol::getFilePath));
 
             for (Map.Entry<String, List<Symbol>> fileEntry : groupedByFile.entrySet()) {
                 writer.println("  <file path=\"" + escapeXml(fileEntry.getKey()) + "\">");
 
-                Map<String, List<Symbol>> groupedByClass = fileEntry.getValue().stream()
+                final var groupedByClass = fileEntry.getValue().stream()
                         .collect(Collectors.groupingBy(s -> s.getClassName() != null ? s.getClassName() : "Top-level"));
 
                 for (Map.Entry<String, List<Symbol>> classEntry : groupedByClass.entrySet()) {

@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 @Slf4j
 public class FileCrawler {
     public List<Path> crawl(String rootPath, Set<String> supportedExtensions) throws IOException {
-        Path root = Paths.get(rootPath);
+        final var root = Paths.get(rootPath);
         if (!Files.exists(root) || !Files.isDirectory(root)) {
             throw new IllegalArgumentException("Invalid root path: " + rootPath);
         }
@@ -40,8 +40,8 @@ public class FileCrawler {
         try (Stream<Path> s = Files.walk(root)) {
             return s.filter(Files::isRegularFile)
                     .filter(path -> {
-                        String fileName = path.getFileName().toString();
-                        int lastDotIndex = fileName.lastIndexOf('.');
+                        final var fileName = path.getFileName().toString();
+                        final var lastDotIndex = fileName.lastIndexOf('.');
                         if (lastDotIndex == -1) return false;
                         return supportedExtensions.contains(fileName.substring(lastDotIndex + 1));
                     })

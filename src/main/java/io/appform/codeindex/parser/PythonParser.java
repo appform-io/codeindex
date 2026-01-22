@@ -41,16 +41,16 @@ public class PythonParser implements Parser {
 
     @Override
     public List<Symbol> parse(Path path, Path sourceRoot) {
-        List<Symbol> symbols = new ArrayList<>();
+        final var symbols = new ArrayList<Symbol>();
         try {
-            List<String> lines = Files.readAllLines(path);
-            String filePath = sourceRoot != null
+            final var lines = Files.readAllLines(path);
+            final var filePath = sourceRoot != null
                     ? sourceRoot.toAbsolutePath().relativize(path.toAbsolutePath()).toString()
                     : path.toAbsolutePath().toString();
 
             for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i);
-                Matcher classMatcher = CLASS_PATTERN.matcher(line);
+                final var line = lines.get(i);
+                final var classMatcher = CLASS_PATTERN.matcher(line);
                 if (classMatcher.find()) {
                     symbols.add(Symbol.builder()
                             .name(classMatcher.group(1))
@@ -62,7 +62,7 @@ public class PythonParser implements Parser {
                     continue;
                 }
 
-                Matcher funcMatcher = FUNC_PATTERN.matcher(line);
+                final var funcMatcher = FUNC_PATTERN.matcher(line);
                 if (funcMatcher.find()) {
                     symbols.add(Symbol.builder()
                             .name(funcMatcher.group(1))

@@ -48,11 +48,12 @@ public class SQLiteStorage implements AutoCloseable {
 
     private void initializeSchema() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-            stmt.execute("""
+                stmt.execute("""
                 CREATE TABLE IF NOT EXISTS symbols (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
                     class_name TEXT,
+                    package_name TEXT,
                     kind TEXT NOT NULL,
                     file_path TEXT NOT NULL,
                     line INTEGER NOT NULL,
@@ -63,21 +64,23 @@ public class SQLiteStorage implements AutoCloseable {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_reference_to ON symbols(reference_to)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_class_name ON symbols(class_name)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_package_name ON symbols(package_name)");
         }
     }
 
     public void saveSymbols(List<Symbol> symbols) throws SQLException {
-        String sql = "INSERT INTO symbols (name, class_name, kind, file_path, line, signature, reference_to) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final var sql = "INSERT INTO symbols (name, class_name, package_name, kind, file_path, line, signature, reference_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             connection.setAutoCommit(false);
             for (Symbol symbol : symbols) {
                 pstmt.setString(1, symbol.getName());
                 pstmt.setString(2, symbol.getClassName());
-                pstmt.setString(3, symbol.getKind().name());
-                pstmt.setString(4, symbol.getFilePath());
-                pstmt.setInt(5, symbol.getLine());
-                pstmt.setString(6, symbol.getSignature());
-                pstmt.setString(7, symbol.getReferenceTo());
+                pstmt.setString(3, symbol.getPackageName());
+                pstmt.setString(4, symbol.getKind().name());
+                pstmt.setString(5, symbol.getFilePath());
+                pstmt.setInt(6, symbol.getLine());
+                pstmt.setString(7, symbol.getSignature());
+                pstmt.setString(8, symbol.getReferenceTo());
                 pstmt.addBatch();
             }
             pstmt.executeBatch();
@@ -103,38 +106,38 @@ public class SQLiteStorage implements AutoCloseable {
     }
 
     public List<Symbol> search(String query, int limit) throws SQLException {
-        String sql;
-        String searchTerm;
         if (query.contains("::")) {
-            String[] parts = query.split("::", 2);
-            sql = "SELECT name, class_name, kind, file_path, line, signature, reference_to FROM symbols WHERE class_name LIKE ? AND name LIKE ? LIMIT ?";
-            searchTerm = parts[1];
-            String classTerm = parts[0];
+            final var parts = query.split("::");
+            final var containerTerm = parts[0];
+            final var symbolTerm = parts[1];
+            final var sql = "SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols WHERE name LIKE ? AND (class_name LIKE ? OR package_name LIKE ?) LIMIT ?";
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, "%" + classTerm + "%");
-                pstmt.setString(2, "%" + searchTerm + "%");
-                pstmt.setInt(3, limit);
+                pstmt.setString(1, "%" + symbolTerm + "%");
+                pstmt.setString(2, "%" + containerTerm + "%");
+                pstmt.setString(3, "%" + containerTerm + "%");
+                pstmt.setInt(4, limit);
                 return executeSearch(pstmt);
             }
         } else {
-            sql = "SELECT name, class_name, kind, file_path, line, signature, reference_to FROM symbols WHERE name LIKE ? OR class_name LIKE ? LIMIT ?";
-            searchTerm = query;
+            final var sql = "SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols WHERE name LIKE ? OR class_name LIKE ? OR package_name LIKE ? LIMIT ?";
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, "%" + searchTerm + "%");
-                pstmt.setString(2, "%" + searchTerm + "%");
-                pstmt.setInt(3, limit);
+                pstmt.setString(1, "%" + query + "%");
+                pstmt.setString(2, "%" + query + "%");
+                pstmt.setString(3, "%" + query + "%");
+                pstmt.setInt(4, limit);
                 return executeSearch(pstmt);
             }
         }
     }
 
     private List<Symbol> executeSearch(PreparedStatement pstmt) throws SQLException {
-        List<Symbol> results = new ArrayList<>();
+        final var results = new ArrayList<Symbol>();
         try (ResultSet rs = pstmt.executeQuery()) {
             while (rs.next()) {
                 results.add(Symbol.builder()
                         .name(rs.getString("name"))
                         .className(rs.getString("class_name"))
+                        .packageName(rs.getString("package_name"))
                         .kind(SymbolKind.valueOf(rs.getString("kind")))
                         .filePath(rs.getString("file_path"))
                         .line(rs.getInt("line"))
@@ -147,7 +150,7 @@ public class SQLiteStorage implements AutoCloseable {
     }
 
     public List<Symbol> getAllSymbols(Set<SymbolKind> kinds) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT name, class_name, kind, file_path, line, signature, reference_to FROM symbols");
+        final var sql = new StringBuilder("SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols");
         if (kinds != null && !kinds.isEmpty()) {
             sql.append(" WHERE kind IN (");
             for (int i = 0; i < kinds.size(); i++) {

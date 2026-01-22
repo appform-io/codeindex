@@ -44,7 +44,7 @@ public class App {
             return;
         }
 
-        String command = args[0];
+        final var command = args[0];
         try {
             if ("index".equals(command)) {
                 indexProject(args[1], args[2]);
@@ -61,23 +61,23 @@ public class App {
     }
 
     private static void indexProject(String projectPath, String dbPath) throws Exception {
-        ParserRegistry registry = new ParserRegistry();
+        final var registry = new ParserRegistry();
         registry.register(new JavaParser(Paths.get(projectPath)));
         registry.register(new PythonParser());
-        CodeIndexer indexer = new CodeIndexer(dbPath, registry);
+        final var indexer = new CodeIndexer(dbPath, registry);
         indexer.index(projectPath);
         log.info("Indexing complete!");
     }
 
     private static void searchIndex(String query, String dbPath) throws Exception {
-        ParserRegistry registry = new ParserRegistry();
+        final var registry = new ParserRegistry();
         // Search might not need a source root for JavaParser, but registry needs it if we use it for indexing
         // For search, we just need the indexer.
-        CodeIndexer indexer = new CodeIndexer(dbPath, registry);
-        List<Symbol> results = indexer.search(query);
+        final var indexer = new CodeIndexer(dbPath, registry);
+        final var results = indexer.search(query);
         System.out.println("Found " + results.size() + " matches:");
         for (Symbol symbol : results) {
-            String displayName = symbol.getClassName() != null 
+            final var displayName = symbol.getClassName() != null 
                 ? symbol.getClassName() + "::" + symbol.getName() 
                 : symbol.getName();
             System.out.printf("[%s] %s -> %s:%d (%s)%n", 
@@ -90,9 +90,9 @@ public class App {
             System.out.println("Usage: export <db_path> <output_file> [format] [kinds]");
             return;
         }
-        String dbPath = args[1];
-        String outputFile = args[2];
-        String format = args.length > 3 ? args[3] : "markdown";
+        final var dbPath = args[1];
+        final var outputFile = args[2];
+        final var format = args.length > 3 ? args[3] : "markdown";
         Set<SymbolKind> kinds = null;
         if (args.length > 4) {
             kinds = Arrays.stream(args[4].split(","))
@@ -100,7 +100,7 @@ public class App {
                     .map(SymbolKind::valueOf)
                     .collect(Collectors.toSet());
         }
-        CodeExporter exporter = new CodeExporter(dbPath);
+        final var exporter = new CodeExporter(dbPath);
         exporter.export(outputFile, format, kinds);
         log.info("Export complete: {}", outputFile);
     }
