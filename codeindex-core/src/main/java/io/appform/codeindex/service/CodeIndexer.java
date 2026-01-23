@@ -17,6 +17,7 @@
 package io.appform.codeindex.service;
 
 import io.appform.codeindex.crawler.FileCrawler;
+import io.appform.codeindex.models.SearchRequest;
 import io.appform.codeindex.models.Symbol;
 import io.appform.codeindex.parser.Parser;
 import io.appform.codeindex.parser.ParserRegistry;
@@ -61,8 +62,12 @@ public class CodeIndexer {
     }
 
     public List<Symbol> search(String query) throws SQLException {
+        return search(SearchRequest.builder().query(query).build());
+    }
+
+    public List<Symbol> search(SearchRequest request) throws SQLException {
         try (SQLiteStorage storage = new SQLiteStorage(dbPath)) {
-            return storage.search(query);
+            return storage.search(request);
         }
     }
 }

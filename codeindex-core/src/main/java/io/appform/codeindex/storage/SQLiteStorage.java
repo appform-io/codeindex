@@ -16,6 +16,7 @@
 
 package io.appform.codeindex.storage;
 
+import io.appform.codeindex.models.SearchRequest;
 import io.appform.codeindex.models.Symbol;
 import io.appform.codeindex.models.SymbolKind;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Slf4j
 public class SQLiteStorage implements AutoCloseable {
@@ -107,27 +110,72 @@ public class SQLiteStorage implements AutoCloseable {
     }
 
     public List<Symbol> search(String query, int limit) throws SQLException {
-        if (query.contains("::")) {
-            final var parts = query.split("::");
-            final var containerTerm = parts[0];
-            final var symbolTerm = parts[1];
-            final var sql = "SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols WHERE name LIKE ? AND (class_name LIKE ? OR package_name LIKE ?) LIMIT ?";
-            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, "%" + symbolTerm + "%");
-                pstmt.setString(2, "%" + containerTerm + "%");
-                pstmt.setString(3, "%" + containerTerm + "%");
-                pstmt.setInt(4, limit);
-                return executeSearch(pstmt);
+        return search(SearchRequest.builder()
+                .query(query)
+                .limit(limit)
+                .build());
+    }
+
+    public List<Symbol> search(SearchRequest request) throws SQLException {
+        final var sql = new StringBuilder("SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols WHERE 1=1");
+        final var params = new ArrayList<>();
+
+        if (request.getQuery() != null && !request.getQuery().isBlank()) {
+            if (request.getQuery().contains("::")) {
+                final var parts = request.getQuery().split("::");
+                final var containerTerm = parts[0];
+                final var symbolTerm = parts[1];
+                sql.append(" AND name LIKE ? AND (class_name LIKE ? OR package_name LIKE ?)");
+                params.add("%" + symbolTerm + "%");
+                params.add("%" + containerTerm + "%");
+                params.add("%" + containerTerm + "%");
+            } else {
+                sql.append(" AND (name LIKE ? OR class_name LIKE ? OR package_name LIKE ?)");
+                params.add("%" + request.getQuery() + "%");
+                params.add("%" + request.getQuery() + "%");
+                params.add("%" + request.getQuery() + "%");
             }
-        } else {
-            final var sql = "SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols WHERE name LIKE ? OR class_name LIKE ? OR package_name LIKE ? LIMIT ?";
-            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, "%" + query + "%");
-                pstmt.setString(2, "%" + query + "%");
-                pstmt.setString(3, "%" + query + "%");
-                pstmt.setInt(4, limit);
-                return executeSearch(pstmt);
+        }
+
+        if (request.getClassName() != null && !request.getClassName().isBlank()) {
+            sql.append(" AND class_name LIKE ?");
+            params.add("%" + request.getClassName() + "%");
+        }
+
+        if (request.getPackageName() != null && !request.getPackageName().isBlank()) {
+            sql.append(" AND package_name LIKE ?");
+            params.add("%" + request.getPackageName() + "%");
+        }
+
+        if (request.getFilePathGlob() != null && !request.getFilePathGlob().isBlank()) {
+            // SQLite doesn't have native GLOB support in the same way as file systems,
+            // but it has a GLOB operator. We'll use LIKE for simplicity or GLOB if preferred.
+            sql.append(" AND file_path GLOB ?");
+            params.add(request.getFilePathGlob());
+        }
+
+        if (request.getKinds() != null && !request.getKinds().isEmpty()) {
+            sql.append(" AND kind IN (")
+                    .append(IntStream.range(0, request.getKinds().size())
+                            .mapToObj(i -> "?")
+                            .collect(Collectors.joining(",")))
+                    .append(")");
+            request.getKinds().forEach(kind -> params.add(kind.name()));
+        }
+
+        sql.append(" LIMIT ?");
+        params.add(request.getLimit());
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                final var param = params.get(i);
+                if (param instanceof Integer) {
+                    pstmt.setInt(i + 1, (Integer) param);
+                } else {
+                    pstmt.setString(i + 1, (String) param);
+                }
             }
+            return executeSearch(pstmt);
         }
     }
 

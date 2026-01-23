@@ -16,6 +16,7 @@
 
 package io.appform.codeindex;
 
+import io.appform.codeindex.models.SearchRequest;
 import io.appform.codeindex.models.Symbol;
 import io.appform.codeindex.models.SymbolKind;
 import io.appform.codeindex.parser.ParserRegistry;
@@ -63,17 +64,40 @@ public class App implements Callable<Integer> {
 
     @Command(name = "search", description = "Search the index for symbols")
     static class SearchCommand implements Callable<Integer> {
-        @Parameters(index = "0", description = "Search query (regex supported)")
+        @Parameters(index = "0", description = "Path to the SQLite database file")
+        private String dbPath;
+
+        @Option(names = {"-q", "--query"}, description = "Search query (regex/like supported)")
         private String query;
 
-        @Parameters(index = "1", description = "Path to the SQLite database file")
-        private String dbPath;
+        @Option(names = {"-k", "--kinds"}, description = "Comma-separated list of symbol kinds to filter (e.g. CLASS,METHOD)", split = ",")
+        private Set<SymbolKind> kinds;
+
+        @Option(names = {"-f", "--file-path"}, description = "Filter by file path glob pattern (e.g. **/src/*.java)")
+        private String filePathGlob;
+
+        @Option(names = {"-c", "--class"}, description = "Filter by class name")
+        private String className;
+
+        @Option(names = {"-p", "--package"}, description = "Filter by package name")
+        private String packageName;
+
+        @Option(names = {"-l", "--limit"}, description = "Limit the number of results", defaultValue = "1000")
+        private int limit;
 
         @Override
         public Integer call() throws Exception {
             final var registry = new ParserRegistry();
             final var indexer = new CodeIndexer(dbPath, registry);
-            final var results = indexer.search(query);
+            final var request = SearchRequest.builder()
+                    .query(query)
+                    .kinds(kinds)
+                    .filePathGlob(filePathGlob)
+                    .className(className)
+                    .packageName(packageName)
+                    .limit(limit)
+                    .build();
+            final var results = indexer.search(request);
             System.out.println("Found " + results.size() + " matches:");
             for (Symbol symbol : results) {
                 final var displayName = symbol.getClassName() != null

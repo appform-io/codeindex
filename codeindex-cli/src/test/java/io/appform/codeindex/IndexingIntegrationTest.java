@@ -16,6 +16,7 @@
 
 package io.appform.codeindex;
 
+import io.appform.codeindex.models.SearchRequest;
 import io.appform.codeindex.models.Symbol;
 import io.appform.codeindex.models.SymbolKind;
 import io.appform.codeindex.storage.SQLiteStorage;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -125,19 +127,45 @@ class IndexingIntegrationTest {
     }
 
     @Test
-    void testSearchFunctionality() throws Exception {
-        Path dbPath = tempDir.resolve("search_test.db");
-        try (SQLiteStorage storage = new SQLiteStorage(dbPath.toString())) {
-            storage.saveSymbols(List.of(
-                    Symbol.builder().name("Alpha").kind(SymbolKind.CLASS).filePath("F1").line(1).signature("S1")
-                            .referenceTo(null).build(),
-                    Symbol.builder().name("Beta").kind(SymbolKind.METHOD).filePath("F2").line(2).signature("S2")
-                            .referenceTo(null).build()
-            ));
+    void testAdvancedSearch() throws Exception {
+        Path srcDir = tempDir.resolve("src-advanced");
+        Files.createDirectories(srcDir);
 
-            List<Symbol> results = storage.search("lp"); // matches Alpha
-            assertEquals(1, results.size());
-            assertEquals("Alpha", results.get(0).getName());
+        Files.writeString(srcDir.resolve("A.java"), "package p1; class A { void m1(){} }");
+        Files.writeString(srcDir.resolve("B.java"), "package p2; class B { void m2(){} }");
+
+        Path dbPath = tempDir.resolve("advanced.db");
+        App.main(new String[]{"index", srcDir.toString(), dbPath.toString()});
+
+        try (SQLiteStorage storage = new SQLiteStorage(dbPath.toString())) {
+            // Filter by kind
+            List<Symbol> methods = storage.search(SearchRequest.builder()
+                    .kinds(Set.of(SymbolKind.METHOD))
+                    .build());
+            assertEquals(2, methods.size());
+
+            // Filter by package
+            List<Symbol> p1Symbols = storage.search(SearchRequest.builder()
+                    .packageName("p1")
+                    .build());
+            System.out.println("P1 symbols: " + p1Symbols);
+            assertTrue(p1Symbols.stream().anyMatch(s -> s.getName().equals("A")));
+            assertTrue(p1Symbols.stream().anyMatch(s -> s.getName().equals("m1")));
+            assertTrue(p1Symbols.stream().noneMatch(s -> s.getName().equals("B")));
+
+            // Filter by file path glob
+            List<Symbol> symbolsFromB = storage.search(SearchRequest.builder()
+                    .filePathGlob("*B.java")
+                    .build());
+            assertTrue(symbolsFromB.stream().anyMatch(s -> s.getName().equals("B")));
+            assertTrue(symbolsFromB.stream().noneMatch(s -> s.getName().equals("A")));
+            assertTrue(symbolsFromB.stream().noneMatch(s -> s.getName().equals("A")));
+
+            // Filter by class name
+            List<Symbol> symbolsFromA = storage.search(SearchRequest.builder()
+                    .className("A")
+                    .build());
+            assertTrue(symbolsFromA.stream().anyMatch(s -> s.getName().equals("m1")));
         }
     }
 }
