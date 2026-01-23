@@ -39,6 +39,7 @@ public class SQLiteStorage implements AutoCloseable {
     SQLiteStorage(Connection connection) throws SQLException {
         this.connection = connection;
         try {
+            tuneDatabase();
             initializeSchema();
         } catch (SQLException e) {
             try {
@@ -47,6 +48,16 @@ public class SQLiteStorage implements AutoCloseable {
                 e.addSuppressed(closeEx);
             }
             throw e;
+        }
+    }
+
+    private void tuneDatabase() throws SQLException {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("PRAGMA journal_mode = WAL");
+            stmt.execute("PRAGMA synchronous = NORMAL");
+            stmt.execute("PRAGMA cache_size = -20000"); // 20MB
+            stmt.execute("PRAGMA temp_store = MEMORY");
+            stmt.execute("PRAGMA mmap_size = 30000000000"); // Up to 30GB mmap
         }
     }
 
@@ -65,6 +76,19 @@ public class SQLiteStorage implements AutoCloseable {
                         reference_to TEXT
                     )
                     """);
+            stmt.execute("""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS symbols_fts USING fts5(
+                        name, class_name, package_name,
+                        content='symbols',
+                        content_rowid='id'
+                    )
+                    """);
+            stmt.execute("""
+                    CREATE TRIGGER IF NOT EXISTS symbols_ai AFTER INSERT ON symbols BEGIN
+                        INSERT INTO symbols_fts(rowid, name, class_name, package_name)
+                        VALUES (new.id, new.name, new.class_name, new.package_name);
+                    END
+                    """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_reference_to ON symbols(reference_to)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_symbols_class_name ON symbols(class_name)");
@@ -74,8 +98,10 @@ public class SQLiteStorage implements AutoCloseable {
 
     public void saveSymbols(List<Symbol> symbols) throws SQLException {
         final var sql = "INSERT INTO symbols (name, class_name, package_name, kind, file_path, line, signature, reference_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        final var batchSize = 1000;
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             connection.setAutoCommit(false);
+            int count = 0;
             for (Symbol symbol : symbols) {
                 pstmt.setString(1, symbol.getName());
                 pstmt.setString(2, symbol.getClassName());
@@ -86,6 +112,10 @@ public class SQLiteStorage implements AutoCloseable {
                 pstmt.setString(7, symbol.getSignature());
                 pstmt.setString(8, symbol.getReferenceTo());
                 pstmt.addBatch();
+
+                if (++count % batchSize == 0) {
+                    pstmt.executeBatch();
+                }
             }
             pstmt.executeBatch();
             connection.commit();
@@ -117,7 +147,7 @@ public class SQLiteStorage implements AutoCloseable {
     }
 
     public List<Symbol> search(SearchRequest request) throws SQLException {
-        final var sql = new StringBuilder("SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols WHERE 1=1");
+        final var sql = new StringBuilder("SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols WHERE id IN (SELECT rowid FROM symbols_fts WHERE symbols_fts MATCH ?)");
         final var params = new ArrayList<>();
 
         if (request.getQuery() != null && !request.getQuery().isBlank()) {
@@ -125,16 +155,14 @@ public class SQLiteStorage implements AutoCloseable {
                 final var parts = request.getQuery().split("::");
                 final var containerTerm = parts[0];
                 final var symbolTerm = parts[1];
-                sql.append(" AND name LIKE ? AND (class_name LIKE ? OR package_name LIKE ?)");
-                params.add("%" + symbolTerm + "%");
-                params.add("%" + containerTerm + "%");
-                params.add("%" + containerTerm + "%");
+                params.add(String.format("name:%s* AND (class_name:%s* OR package_name:%s*)", symbolTerm, containerTerm, containerTerm));
             } else {
-                sql.append(" AND (name LIKE ? OR class_name LIKE ? OR package_name LIKE ?)");
-                params.add("%" + request.getQuery() + "%");
-                params.add("%" + request.getQuery() + "%");
-                params.add("%" + request.getQuery() + "%");
+                params.add(String.format("name:%s* OR class_name:%s* OR package_name:%s*", request.getQuery(), request.getQuery(), request.getQuery()));
             }
+        } else {
+            // Fallback for empty query if other filters are present
+            sql.setLength(0);
+            sql.append("SELECT name, class_name, package_name, kind, file_path, line, signature, reference_to FROM symbols WHERE 1=1");
         }
 
         if (request.getClassName() != null && !request.getClassName().isBlank()) {
