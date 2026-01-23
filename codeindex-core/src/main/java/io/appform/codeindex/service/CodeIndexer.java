@@ -53,7 +53,8 @@ public class CodeIndexer {
                         final var symbols = parser.parse(file, Paths.get(projectPath));
                         storage.saveSymbols(symbols);
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     log.error("Failed to index file: {}", file, e);
                 }
             }

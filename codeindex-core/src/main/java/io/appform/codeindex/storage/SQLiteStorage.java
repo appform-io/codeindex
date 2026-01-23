@@ -41,10 +41,12 @@ public class SQLiteStorage implements AutoCloseable {
         try {
             tuneDatabase();
             initializeSchema();
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             try {
                 connection.close();
-            } catch (SQLException closeEx) {
+            }
+            catch (SQLException closeEx) {
                 e.addSuppressed(closeEx);
             }
             throw e;
@@ -119,17 +121,21 @@ public class SQLiteStorage implements AutoCloseable {
             }
             pstmt.executeBatch();
             connection.commit();
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             try {
                 connection.rollback();
-            } catch (SQLException rollbackEx) {
+            }
+            catch (SQLException rollbackEx) {
                 e.addSuppressed(rollbackEx);
             }
             throw e;
-        } finally {
+        }
+        finally {
             try {
                 connection.setAutoCommit(true);
-            } catch (SQLException e) {
+            }
+            catch (SQLException e) {
                 log.error("Error resetting auto-commit", e);
             }
         }

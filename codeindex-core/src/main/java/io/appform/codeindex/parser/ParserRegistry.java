@@ -44,9 +44,11 @@ public class ParserRegistry {
                     final var parser = (Parser) clazz.getDeclaredConstructor().newInstance();
                     register(parser);
                     log.info("Discovered and registered parser: {}", clazz.getName());
-                } catch (NoSuchMethodException e) {
+                }
+                catch (NoSuchMethodException e) {
                     log.debug("No default constructor for {}, skipping auto-registration. It must be registered manually.", clazz.getName());
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     log.error("Failed to instantiate parser: {}", clazz.getName(), e);
                 }
             }

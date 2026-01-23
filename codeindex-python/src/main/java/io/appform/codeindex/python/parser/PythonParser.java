@@ -57,7 +57,8 @@ public class PythonParser implements Parser {
             ParseTree tree = parser.file_input();
             var visitor = new PythonVisitor(symbols, filePath);
             visitor.visit(tree);
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             log.error("Error parsing python file: {}", path, e);
         }
         return symbols;

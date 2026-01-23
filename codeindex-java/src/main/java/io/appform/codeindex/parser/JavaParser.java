@@ -168,7 +168,8 @@ public class JavaParser implements Parser {
                             .signature(mce.toString())
                             .referenceTo(resolved.getQualifiedName())
                             .build());
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     log.debug("Could not resolve method call: {}", mce.getNameAsString());
                 }
             });
@@ -192,12 +193,14 @@ public class JavaParser implements Parser {
                                 .referenceTo(resolved.getName())
                                 .build());
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     log.debug("Could not resolve name expression: {}", ne.getNameAsString());
                 }
             });
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Failed to parse file: {}", path, e);
         }
         return symbols;
