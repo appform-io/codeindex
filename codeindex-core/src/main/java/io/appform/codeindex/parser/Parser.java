@@ -24,5 +24,9 @@ import java.util.Set;
 public interface Parser {
     Set<String> supportedExtensions();
 
+    default void setup(Path sourceRoot, List<Path> classpath) {
+        // Default implementation does nothing
+    }
+
     List<Symbol> parse(Path path, Path sourceRoot);
 }

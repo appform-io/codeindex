@@ -29,9 +29,12 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Command(name = "codeindex", mixinStandardHelpOptions = true, version = "1.0",
@@ -52,11 +55,17 @@ public class App implements Callable<Integer> {
         @Parameters(index = "1", description = "Path to the SQLite database file")
         private String dbPath;
 
+        @Option(names = {"-cp", "--classpath"}, description = "Comma-separated list of jar files or directories for type resolution", split = ",")
+        private List<String> classpath;
+
         @Override
         public Integer call() throws Exception {
             final var registry = new ParserRegistry();
             final var indexer = new CodeIndexer(dbPath, registry);
-            indexer.index(projectPath);
+            final var cpPaths = classpath != null
+                    ? classpath.stream().map(Paths::get).collect(Collectors.toList())
+                    : List.<Path>of();
+            indexer.index(projectPath, cpPaths);
             log.info("Indexing complete!");
             return 0;
         }

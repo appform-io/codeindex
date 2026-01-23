@@ -59,6 +59,10 @@ public class ParserRegistry {
         parsers.add(parser);
     }
 
+    public List<Parser> getParsers() {
+        return parsers;
+    }
+
     public Parser getParserForFile(Path path) {
         final var fileName = path.getFileName().toString();
         final var lastDotIndex = fileName.lastIndexOf('.');

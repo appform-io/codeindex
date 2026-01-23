@@ -99,7 +99,9 @@ class SecurityAndResilienceTest {
 
         Path dbPath = tempDir.resolve("resilience.db");
         ParserRegistry registry = new ParserRegistry();
-        registry.register(new JavaParser(srcDir));
+        JavaParser javaParser = new JavaParser();
+        javaParser.setup(srcDir, List.of());
+        registry.register(javaParser);
         CodeIndexer indexer = new CodeIndexer(dbPath.toString(), registry);
 
         // Should not throw exception
@@ -120,7 +122,9 @@ class SecurityAndResilienceTest {
 
         Path dbPath = tempDir.resolve("portable.db");
         ParserRegistry registry = new ParserRegistry();
-        registry.register(new JavaParser(srcDir));
+        JavaParser javaParser = new JavaParser();
+        javaParser.setup(srcDir, List.of());
+        registry.register(javaParser);
         CodeIndexer indexer = new CodeIndexer(dbPath.toString(), registry);
         indexer.index(srcDir.toString());
 

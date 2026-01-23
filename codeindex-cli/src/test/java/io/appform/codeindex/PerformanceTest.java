@@ -59,7 +59,9 @@ class PerformanceTest {
 
         Path dbPath = tempDir.resolve("perf.db");
         ParserRegistry registry = new ParserRegistry();
-        registry.register(new JavaParser(srcDir));
+        JavaParser javaParser = new JavaParser();
+        javaParser.setup(srcDir, List.of());
+        registry.register(javaParser);
         CodeIndexer indexer = new CodeIndexer(dbPath.toString(), registry);
 
         long start = System.currentTimeMillis();
@@ -81,7 +83,9 @@ class PerformanceTest {
         
         Path dbPath = tempDir.resolve("search_perf.db");
         ParserRegistry registry = new ParserRegistry();
-        registry.register(new JavaParser(srcDir));
+        JavaParser javaParser = new JavaParser();
+        javaParser.setup(srcDir, List.of());
+        registry.register(javaParser);
         CodeIndexer indexer = new CodeIndexer(dbPath.toString(), registry);
         indexer.index(srcDir.toString());
 

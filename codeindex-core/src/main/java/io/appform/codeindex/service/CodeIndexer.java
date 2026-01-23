@@ -42,15 +42,22 @@ public class CodeIndexer {
     }
 
     public void index(String projectPath) throws Exception {
+        index(projectPath, List.of());
+    }
+
+    public void index(String projectPath, List<Path> classpath) throws Exception {
         log.info("Starting indexing for project: {}", projectPath);
+        final var projectRoot = Paths.get(projectPath);
+        parserRegistry.getParsers().forEach(p -> p.setup(projectRoot, classpath));
+
         final var files = crawler.crawl(projectPath, parserRegistry.getSupportedExtensions());
-        
+
         try (SQLiteStorage storage = new SQLiteStorage(dbPath)) {
             for (Path file : files) {
                 try {
                     final var parser = parserRegistry.getParserForFile(file);
                     if (parser != null) {
-                        final var symbols = parser.parse(file, Paths.get(projectPath));
+                        final var symbols = parser.parse(file, projectRoot);
                         storage.saveSymbols(symbols);
                     }
                 }

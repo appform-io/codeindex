@@ -29,6 +29,7 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedValueDeclaration;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
 import io.appform.codeindex.models.Symbol;
@@ -48,22 +49,27 @@ public class JavaParser implements Parser {
     private CombinedTypeSolver typeSolver;
 
     public JavaParser() {
-        this(null);
-    }
-
-    public JavaParser(Path sourceRoot) {
         this.typeSolver = new CombinedTypeSolver();
         typeSolver.add(new ReflectionTypeSolver());
-        if (sourceRoot != null) {
-            typeSolver.add(new JavaParserTypeSolver(sourceRoot));
-        }
         final var symbolSolver = new JavaSymbolSolver(typeSolver);
         StaticJavaParser.getParserConfiguration().setSymbolResolver(symbolSolver);
     }
 
-    static {
-        StaticJavaParser.getParserConfiguration()
-                .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17);
+    @Override
+    public void setup(Path sourceRoot, List<Path> classpath) {
+        if (sourceRoot != null) {
+            typeSolver.add(new JavaParserTypeSolver(sourceRoot));
+        }
+        if (classpath != null) {
+            for (Path path : classpath) {
+                try {
+                    typeSolver.add(new JarTypeSolver(path));
+                }
+                catch (IOException e) {
+                    log.error("Failed to load jar for type resolution: {}", path, e);
+                }
+            }
+        }
     }
 
     @Override
